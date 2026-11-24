@@ -1,0 +1,410 @@
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Web.Mvc;
+using InventoryManagement.Models;
+
+namespace InventoryManagement.Controllers
+{
+    public class ProductController : Controller
+    {
+        string cs = ConfigurationManager.ConnectionStrings["InventoryDB"].ConnectionString;
+
+        public ActionResult Index()
+        {
+            List<Product> products = new List<Product>();
+
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = "SELECT * FROM Products";
+                SqlCommand cmd = new SqlCommand(query, con);
+
+                con.Open();
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                while (dr.Read())
+                {
+                    products.Add(new Product
+                    {
+                        ProductId = Convert.ToInt32(dr["ProductId"]),
+                        ProductName = dr["ProductName"].ToString(),
+                        Category = dr["Category"].ToString(),
+                        Quantity = Convert.ToInt32(dr["Quantity"]),
+                        Price = Convert.ToDecimal(dr["Price"])
+                    });
+                }
+            }
+            return View(products);
+        }
+
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(Product p)
+        {
+            if (ModelState.IsValid)
+            {
+                using (SqlConnection con = new SqlConnection(cs))
+                {
+                    string query = @"INSERT INTO Products
+                    (ProductName, Category, Quantity, Price)
+                    VALUES (@ProductName, @Category, @Quantity, @Price)";
+
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@ProductName", p.ProductName);
+                    cmd.Parameters.AddWithValue("@Category", p.Category);
+                    cmd.Parameters.AddWithValue("@Quantity", p.Quantity);
+                    cmd.Parameters.AddWithValue("@Price", p.Price);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                return RedirectToAction("Index");
+            }
+            return View(p);
+        }
+
+        public ActionResult Edit(int id)
+        {
+            Product p = null;
+
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = "SELECT * FROM Products WHERE ProductId=@id";
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@id", id);
+
+                con.Open();
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                if (dr.Read())
+                {
+                    p = new Product
+                    {
+                        ProductId = Convert.ToInt32(dr["ProductId"]),
+                        ProductName = dr["ProductName"].ToString(),
+                        Category = dr["Category"].ToString(),
+                        Quantity = Convert.ToInt32(dr["Quantity"]),
+                        Price = Convert.ToDecimal(dr["Price"])
+                    };
+                }
+            }
+
+            if (p == null)
+                return HttpNotFound();
+
+            return View(p);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(Product p)
+        {
+            if (ModelState.IsValid)
+            {
+                using (SqlConnection con = new SqlConnection(cs))
+                {
+                    string query = @"UPDATE Products SET
+                    ProductName=@ProductName,
+                    Category=@Category,
+                    Quantity=@Quantity,
+                    Price=@Price
+                    WHERE ProductId=@ProductId";
+
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@ProductId", p.ProductId);
+                    cmd.Parameters.AddWithValue("@ProductName", p.ProductName);
+                    cmd.Parameters.AddWithValue("@Category", p.Category);
+                    cmd.Parameters.AddWithValue("@Quantity", p.Quantity);
+                    cmd.Parameters.AddWithValue("@Price", p.Price);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                return RedirectToAction("Index");
+            }
+            return View(p);
+        }
+
+        public ActionResult Delete(int id)
+        {
+            Product p = null;
+
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = "SELECT * FROM Products WHERE ProductId=@id";
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@id", id);
+
+                con.Open();
+                SqlDataReader dr = cmd.ExecuteReader();
+
+                if (dr.Read())
+                {
+                    p = new Product
+                    {
+                        ProductId = Convert.ToInt32(dr["ProductId"]),
+                        ProductName = dr["ProductName"].ToString(),
+                        Category = dr["Category"].ToString(),
+                        Quantity = Convert.ToInt32(dr["Quantity"]),
+                        Price = Convert.ToDecimal(dr["Price"])
+                    };
+                }
+            }
+
+            if (p == null)
+                return HttpNotFound();
+
+            return View(p);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult DeleteConfirmed(int id)
+        {
+            using (SqlConnection con = new SqlConnection(cs))
+            {
+                string query = "DELETE FROM Products WHERE ProductId=@id";
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@id", id);
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+            return RedirectToAction("Index");
+        }
+    }
+}
+
+==================================================
+2. Product.cs
+--------------------------------------------------
+
+namespace InventoryManagement.Models
+{
+    public class Product
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; }
+        public string Category { get; set; }
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+    }
+}
+
+==================================================
+3. Create.cshtml
+--------------------------------------------------
+
+@model InventoryManagement.Models.Product
+
+@{
+    ViewBag.Title = "Add Product";
+}
+
+<h2>INVENTORY MANAGEMENT</h2>
+<h3>ADD NEW PRODUCT</h3>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <p>Product Name<br />
+    @Html.TextBoxFor(m => m.ProductName)</p>
+
+    <p>Category<br />
+    @Html.TextBoxFor(m => m.Category)</p>
+
+    <p>Quantity<br />
+    @Html.TextBoxFor(m => m.Quantity)</p>
+
+    <p>Price<br />
+    @Html.TextBoxFor(m => m.Price)</p>
+
+    <button type="submit">Add Product</button>
+}
+
+<hr />
+<footer>
+    <p>© 2026 - My ASP.NET Application</p>
+</footer>
+
+==================================================
+4. Edit.cshtml
+--------------------------------------------------
+
+@model InventoryManagement.Models.Product
+
+@{
+    ViewBag.Title = "Edit Product";
+}
+
+<h2>INVENTORY MANAGEMENT</h2>
+<h3>UPDATE PRODUCT</h3>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.ProductId)
+
+    <p>Product Name<br />
+    @Html.TextBoxFor(m => m.ProductName)</p>
+
+    <p>Category<br />
+    @Html.TextBoxFor(m => m.Category)</p>
+
+    <p>Quantity<br />
+    @Html.TextBoxFor(m => m.Quantity)</p>
+
+    <p>Price<br />
+    @Html.TextBoxFor(m => m.Price)</p>
+
+    <button type="submit">Update Product</button>
+}
+
+<hr />
+<footer>
+    <p>© 2026 - My ASP.NET Application</p>
+</footer>
+
+==================================================
+5. Delete.cshtml
+--------------------------------------------------
+
+@model InventoryManagement.Models.Product
+
+@{
+    ViewBag.Title = "Delete Product";
+}
+
+<h2>INVENTORY MANAGEMENT</h2>
+<h3>DELETE PRODUCT</h3>
+
+<p>Are you sure you want to delete this product?</p>
+
+<p>Product ID: @Model.ProductId</p>
+<p>Product Name: @Model.ProductName</p>
+<p>Category: @Model.Category</p>
+<p>Quantity: @Model.Quantity</p>
+<p>Price: @Model.Price</p>
+
+@using (Html.BeginForm("DeleteConfirmed", "Product",
+    new { id = Model.ProductId }, FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    <button type="submit">Confirm Delete</button>
+}
+
+<a href="@Url.Action("Index", "Product")">Cancel</a>
+
+<hr />
+<footer>
+    <p>© 2026 - My ASP.NET Application</p>
+</footer>
+
+==================================================
+6. Index.cshtml
+--------------------------------------------------
+
+@model IEnumerable<InventoryManagement.Models.Product>
+
+@{
+    ViewBag.Title = "Inventory Management";
+}
+
+<h2>INVENTORY MANAGEMENT</h2>
+
+<p>
+    <a href="@Url.Action("Create", "Product")">
+        Add New Product
+    </a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+    <tr>
+        <th>Product ID</th>
+        <th>Product Name</th>
+        <th>Category</th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th>Actions</th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.ProductId</td>
+            <td>@item.ProductName</td>
+            <td>@item.Category</td>
+            <td>@item.Quantity</td>
+            <td>@item.Price</td>
+            <td>
+                <a href="@Url.Action("Edit", new { id = item.ProductId })">Edit</a>
+                |
+                <a href="@Url.Action("Delete", new { id = item.ProductId })">Delete</a>
+            </td>
+        </tr>
+    }
+</table>
+
+<hr />
+<footer>
+    <p>© 2026 - My ASP.NET Application</p>
+</footer>
+
+==================================================
+7. Web.config
+--------------------------------------------------
+
+<?xml version="1.0"?>
+<configuration>
+
+    <connectionStrings>
+        <add name="InventoryDB"
+             connectionString="Data Source=.;Initial Catalog=InventoryDB;Integrated Security=True"
+             providerName="System.Data.SqlClient"/>
+    </connectionStrings>
+
+    <appSettings>
+        <add key="webpages:Enabled" value="false"/>
+    </appSettings>
+
+    <system.web>
+        <compilation debug="true" targetFramework="4.8"/>
+        <httpRuntime targetFramework="4.8"/>
+    </system.web>
+
+</configuration>
+
+==================================================
+8. SQL DATABASE
+--------------------------------------------------
+
+CREATE DATABASE InventoryDB;
+
+USE InventoryDB;
+
+CREATE TABLE Products
+(
+    ProductId INT IDENTITY(1,1) PRIMARY KEY,
+    ProductName VARCHAR(100),
+    Category VARCHAR(100),
+    Quantity INT,
+    Price DECIMAL(10,2)
+);
+
+INSERT INTO Products
+(ProductName, Category, Quantity, Price)
+VALUES
+('Laptop', 'Electronics', 10, 50000),
+('Mouse', 'Accessories', 25, 500),
+('Keyboard', 'Accessories', 15, 1000);
+
+SELECT * FROM Products;
+
+
